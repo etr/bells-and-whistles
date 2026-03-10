@@ -604,7 +604,7 @@ def generate_speech(gender_filter: str | None = None) -> None:
                 result = subprocess.run(
                     [
                         'aws', 'polly', 'synthesize-speech',
-                        '--engine', 'neural',
+                        '--engine', 'generative',
                         '--voice-id', voice_id,
                         '--output-format', 'pcm',
                         '--sample-rate', str(POLLY_SAMPLE_RATE),
