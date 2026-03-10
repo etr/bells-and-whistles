@@ -12,10 +12,7 @@ You are the bells-and-whistles installer. Guide the user through configuring not
 
 ## Steps
 
-### 1. Check prerequisites
-Verify `aws` CLI is available by running `which aws`. If not found, warn the user that voice features require AWS CLI with Polly access, and offer to proceed with sound-only mode.
-
-### 2. Ask notification mode
+### 1. Ask notification mode
 Use AskUserQuestion to ask:
 - Question: "How should bells-and-whistles notify you?"
 - Options: ["Sound + Voice", "Sound only", "Voice only"]
@@ -25,7 +22,7 @@ Map the response:
 - "Sound only" → `sound_only`
 - "Voice only" → `voice_only`
 
-### 3. Ask voice gender (if voice enabled)
+### 2. Ask voice gender (if voice enabled)
 If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
 - Question: "Which voice?"
 - Options: ["Male (Matthew)", "Female (Joanna)"]
@@ -34,7 +31,7 @@ Map: "Male (Matthew)" → `male`, "Female (Joanna)" → `female`
 
 If mode is `sound_only`, default gender to `male` (doesn't matter, won't be used).
 
-### 4. Ask theme
+### 3. Ask theme
 Use AskUserQuestion:
 - Question: "Pick a notification sound theme:"
 - Options: ["Videogame", "Disney Adults", "Anime", "Movie Addicts", "90s Rock", "Classical Music", "Beeps/Tones", "Chirps"]
@@ -49,7 +46,7 @@ Map:
 - "Beeps/Tones" → `beeps`
 - "Chirps" → `chirps`
 
-### 5. Write config
+### 4. Write config
 Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
 ```json
 {
@@ -59,10 +56,10 @@ Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
 }
 ```
 
-### 6. Clean up old hooks
+### 5. Clean up old hooks
 Read `~/.claude/settings.json`. If it contains hook entries under `Stop` or `Notification` that reference `~/.claude/hooks/notify-sound.sh`, remove those specific entries (but preserve any other hooks and all other settings). Write back the cleaned file.
 
-### 7. Summary
+### 6. Summary
 Print a summary:
 - Theme: <display name>
 - Mode: <display name>
