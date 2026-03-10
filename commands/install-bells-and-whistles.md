@@ -59,19 +59,16 @@ Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
 }
 ```
 
-### 6. Generate sounds
-Run `python3 ${CLAUDE_PLUGIN_ROOT}/generate_sounds.py` to generate all melody and speech files. This takes about 30 seconds for speech (AWS Polly calls).
-
-### 7. Clean up old hooks
+### 6. Clean up old hooks
 Read `~/.claude/settings.json`. If it contains hook entries under `Stop` or `Notification` that reference `~/.claude/hooks/notify-sound.sh`, remove those specific entries (but preserve any other hooks and all other settings). Write back the cleaned file.
 
-### 8. Summary
+### 7. Summary
 Print a summary:
 - Theme: <display name>
 - Mode: <display name>
 - Gender: <display name> (if applicable)
-- Number of melody files generated
-- Number of speech files generated
+- Number of melody files available
+- Number of speech files available
 - Whether old hooks were cleaned up
 
 Tell the user the plugin is now active and will play sounds on Stop and Notification events. If this is a fresh install, they may need to restart Claude Code and accept the plugin.
