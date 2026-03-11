@@ -1,0 +1,56 @@
+{
+  "default": {
+    "stop": ["Job completed!"],
+    "notification": ["Hey! Back to work!"],
+    "stop_window": ["Job completed on window {window}!"],
+    "notification_window": ["Hey! Back to work! Window {window}!"]
+  },
+  "cyberpunk": {
+    "stop": [
+      "Flatline complete, choom!",
+      "Preem work. Delta out.",
+      "Job's done. Go touch some grass, gonk.",
+      "Nova output, choombatta.",
+      "Eddies earned. Slot in when ready."
+    ],
+    "notification": [
+      "Hey choom, need your input!",
+      "Wake up, samurai — permission needed.",
+      "Got a gig for you, merc.",
+      "Choom! Eyes on deck!",
+      "V, pick up — got a situation."
+    ],
+    "stop_window": [
+      "Flatline complete on window {window}, choom!",
+      "Preem work on window {window}. Delta out."
+    ],
+    "notification_window": [
+      "Hey choom! Window {window} needs your input!",
+      "Wake up, samurai — window {window} needs you."
+    ]
+  },
+  "dnd": {
+    "stop": [
+      "Quest complete! Roll for loot.",
+      "The party rests. Long rest granted.",
+      "Victory! The bard begins composing.",
+      "Encounter resolved. XP awarded.",
+      "The dungeon master nods approvingly."
+    ],
+    "notification": [
+      "Roll for initiative!",
+      "The DM requires your attention!",
+      "A wild permission prompt appears!",
+      "Halt, adventurer — choice required!",
+      "The oracle seeks your guidance!"
+    ],
+    "stop_window": [
+      "Quest complete on window {window}! Roll for loot.",
+      "Window {window} encounter resolved. XP awarded."
+    ],
+    "notification_window": [
+      "Roll for initiative! Window {window}!",
+      "The DM requires your attention on window {window}!"
+    ]
+  }
+}
