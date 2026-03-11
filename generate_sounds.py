@@ -2,6 +2,7 @@
 """Generate notification melodies (7 themes x 10) and AWS Polly speech WAVs."""
 
 import argparse
+import json
 import math
 import struct
 import subprocess
@@ -12,6 +13,7 @@ from pathlib import Path
 SAMPLE_RATE = 44100
 POLLY_SAMPLE_RATE = 16000
 SOUNDS_DIR = Path(__file__).parent / 'sounds'
+SPEECH_PHRASES_FILE = Path(__file__).parent / 'speech_phrases.json'
 
 # ---------------------------------------------------------------------------
 # Melody definitions: dict[theme_name, dict[melody_name, list[(freq_hz, dur_ms)]]]
@@ -605,16 +607,38 @@ THEMES: dict[str, dict[str, list[tuple[float, int]]]] = {
 }
 
 # ---------------------------------------------------------------------------
-# Speech phrases (22 total)
+# Speech phrases
 # ---------------------------------------------------------------------------
 
-SPEECH_PHRASES: dict[str, str] = {
-    'stop': 'Job completed!',
-    'notification': 'Hey! Back to work!',
-}
-for _i in range(10):
-    SPEECH_PHRASES[f'stop_window_{_i}'] = f'Job completed on window {_i}!'
-    SPEECH_PHRASES[f'notification_window_{_i}'] = f'Hey! Back to work! Window {_i}!'
+
+def load_speech_phrases() -> dict:
+    """Load speech phrases from speech_phrases.json."""
+    with open(SPEECH_PHRASES_FILE) as f:
+        return json.load(f)
+
+
+def expand_phrases(phrases: dict, theme: str) -> dict[str, str]:
+    """Expand a theme's phrases into numbered {name}_{idx} -> text mappings.
+
+    Falls back to 'default' theme if the requested theme has no speech entry.
+    Expands {window} templates for window indices 0-9.
+    """
+    theme_phrases = phrases.get(theme, phrases['default'])
+    result: dict[str, str] = {}
+
+    for event_type in ('stop', 'notification'):
+        for idx, text in enumerate(theme_phrases.get(event_type, phrases['default'][event_type])):
+            result[f'{event_type}_{idx}'] = text
+
+    for event_type in ('stop_window', 'notification_window'):
+        templates = theme_phrases.get(event_type, phrases['default'][event_type])
+        for win_idx in range(10):
+            for idx, template in enumerate(templates):
+                text = template.replace('{window}', str(win_idx))
+                result[f'{event_type}_{win_idx}_{idx}'] = text
+
+    return result
+
 
 POLLY_VOICES: dict[str, str] = {
     'male': 'Matthew',
@@ -704,44 +728,48 @@ def generate_melodies(theme_filter: str | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 
-def generate_speech(gender_filter: str | None = None) -> None:
+def generate_speech_polly(gender_filter: str | None = None, theme_filter: str | None = None) -> None:
     """Generate TTS speech WAV files using AWS Polly."""
+    phrases = load_speech_phrases()
     genders = {gender_filter: POLLY_VOICES[gender_filter]} if gender_filter else POLLY_VOICES
+    themes_to_gen = [theme_filter] if theme_filter else list(phrases.keys())
 
     for gender, voice_id in genders.items():
-        speech_dir = SOUNDS_DIR / 'speech' / gender
-        speech_dir.mkdir(parents=True, exist_ok=True)
-        count = 0
+        for theme in themes_to_gen:
+            expanded = expand_phrases(phrases, theme)
+            speech_dir = SOUNDS_DIR / 'speech' / gender / theme
+            speech_dir.mkdir(parents=True, exist_ok=True)
+            count = 0
 
-        for name, text in SPEECH_PHRASES.items():
-            wav_path = speech_dir / f'{name}.wav'
+            for name, text in expanded.items():
+                wav_path = speech_dir / f'{name}.wav'
 
-            with tempfile.NamedTemporaryFile(suffix='.pcm', delete=False) as tmp:
-                tmp_path = Path(tmp.name)
+                with tempfile.NamedTemporaryFile(suffix='.pcm', delete=False) as tmp:
+                    tmp_path = Path(tmp.name)
 
-            try:
-                result = subprocess.run(
-                    [
-                        'aws', 'polly', 'synthesize-speech',
-                        '--engine', 'generative',
-                        '--voice-id', voice_id,
-                        '--output-format', 'pcm',
-                        '--sample-rate', str(POLLY_SAMPLE_RATE),
-                        '--text', text,
-                        str(tmp_path),
-                    ],
-                    capture_output=True, text=True,
-                )
-                if result.returncode != 0:
-                    print(f'  ERROR: Polly failed for {name}: {result.stderr.strip()}')
-                    continue
+                try:
+                    result = subprocess.run(
+                        [
+                            'aws', 'polly', 'synthesize-speech',
+                            '--engine', 'generative',
+                            '--voice-id', voice_id,
+                            '--output-format', 'pcm',
+                            '--sample-rate', str(POLLY_SAMPLE_RATE),
+                            '--text', text,
+                            str(tmp_path),
+                        ],
+                        capture_output=True, text=True,
+                    )
+                    if result.returncode != 0:
+                        print(f'  ERROR: Polly failed for {name}: {result.stderr.strip()}')
+                        continue
 
-                wrap_pcm_in_wav(tmp_path, wav_path)
-                count += 1
-            finally:
-                tmp_path.unlink(missing_ok=True)
+                    wrap_pcm_in_wav(tmp_path, wav_path)
+                    count += 1
+                finally:
+                    tmp_path.unlink(missing_ok=True)
 
-        print(f'  -> {count} speech files ({gender}/{voice_id}) in speech/{gender}/\n')
+            print(f'  -> {count} speech files ({gender}/{voice_id}) in speech/{gender}/{theme}/\n')
 
 
 # ---------------------------------------------------------------------------
@@ -750,11 +778,16 @@ def generate_speech(gender_filter: str | None = None) -> None:
 
 
 def main() -> None:
+    all_themes = list(THEMES.keys())
     parser = argparse.ArgumentParser(description='Generate bells-and-whistles notification sounds')
     parser.add_argument('--melodies-only', action='store_true', help='Only generate melodies')
     parser.add_argument('--speech-only', action='store_true', help='Only generate speech')
-    parser.add_argument('--theme', choices=list(THEMES.keys()), help='Generate only one theme')
-    parser.add_argument('--gender', choices=['male', 'female'], help='Generate only one gender')
+    parser.add_argument('--theme', choices=all_themes, help='Generate only one theme')
+    parser.add_argument('--gender', choices=['male', 'female'], help='Generate only one gender (Polly)')
+    parser.add_argument('--tts-provider', choices=['polly', 'elevenlabs'], default='polly',
+                        help='TTS provider for speech generation (default: polly)')
+    parser.add_argument('--api-key', help='ElevenLabs API key')
+    parser.add_argument('--voice-id', help='ElevenLabs voice ID')
     args = parser.parse_args()
 
     SOUNDS_DIR.mkdir(parents=True, exist_ok=True)
@@ -764,8 +797,14 @@ def main() -> None:
         generate_melodies(args.theme)
 
     if not args.melodies_only:
-        print('=== Generating speech (AWS Polly) ===\n')
-        generate_speech(args.gender)
+        if args.tts_provider == 'elevenlabs':
+            if not args.api_key or not args.voice_id:
+                parser.error('--api-key and --voice-id are required for ElevenLabs')
+            print('=== Generating speech (ElevenLabs) ===\n')
+            generate_speech_elevenlabs(args.api_key, args.voice_id, args.theme)
+        else:
+            print('=== Generating speech (AWS Polly) ===\n')
+            generate_speech_polly(args.gender, args.theme)
 
     print('Done!')
 
