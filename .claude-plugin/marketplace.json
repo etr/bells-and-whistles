@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "bells-and-whistles",
-      "source": "./plugins/bells-and-whistles",
+      "source": "./",
       "description": "Play notification sounds and voice announcements when Claude Code stops or needs attention"
     }
   ]
