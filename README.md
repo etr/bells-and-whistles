@@ -25,18 +25,34 @@ Pick one. You will not be quizzed.
 | **Classical** | Beethoven's Fifth, Fur Elise, Ride of the Valkyries |
 | **Beeps** | Clean, professional tones for people who attend stand-ups with their camera on |
 | **Chirps** | Robins, canaries, chickadees — an aviary in your terminal |
+| **Cyberpunk 2077** | Neon synth drones, netrunner arpeggios, corpo alerts, braindance glitches |
+| **D&D / Fantasy** | Tavern lutes, quest fanfares, spell casts, critical hits, dragon roars |
 
 Each theme contains 10 short melodies. The plugin picks one at random, so
 repetition stays tolerable.
 
 ## Voice
 
-Voice announcements use AWS Polly (Matthew or Joanna). If you run tmux, the
-voice tells you *which window* finished — useful when you have six agents
-running and zero idea which one just spoke up.
+Voice announcements use either **AWS Polly** (Matthew or Joanna) or **ElevenLabs**
+(bring your own voice ID). If you run tmux, the voice tells you *which window*
+finished — useful when you have six agents running and zero idea which one just
+spoke up.
 
 Voice is optional. The plugin ships pre-generated WAV files and works fine
-without AWS credentials.
+without any TTS credentials.
+
+### ElevenLabs setup
+
+1. Get an API key from [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys)
+2. Pick a voice from the [Voice Library](https://elevenlabs.io/app/voice-library) and copy its voice ID
+3. Run `/configure-bells-and-whistles` and select ElevenLabs as the TTS provider
+4. Generate speech files:
+
+```
+python3 generate_sounds.py --speech-only --tts-provider elevenlabs --api-key YOUR_KEY --voice-id YOUR_VOICE_ID
+```
+
+Requires `ffmpeg` installed for MP3→WAV conversion.
 
 ## Installation
 
@@ -82,15 +98,20 @@ Edit `config.json` directly if you prefer:
 ```json
 {
   "mode": "sound_and_voice",
-  "gender": "male",
-  "theme": "videogame"
+  "tts_provider": "elevenlabs",
+  "elevenlabs_api_key": "sk-...",
+  "elevenlabs_voice_id": "pNInz6obpgDQGcFmaJgB",
+  "theme": "cyberpunk"
 }
 ```
 
 **mode** — `sound_and_voice`, `sound_only`, or `voice_only`
-**gender** — `male` or `female` (ignored in `sound_only` mode)
+**tts_provider** — `polly` (default) or `elevenlabs`
+**gender** — `male` or `female` (Polly only)
+**elevenlabs_api_key** — your ElevenLabs API key (ElevenLabs only)
+**elevenlabs_voice_id** — your ElevenLabs voice ID (ElevenLabs only)
 **theme** — one of: `videogame`, `disney`, `anime`, `movies`, `90s_rock`,
-`classical`, `beeps`, `chirps`
+`classical`, `beeps`, `chirps`, `cyberpunk`, `dnd`
 
 ## Platform support
 
@@ -110,13 +131,26 @@ dependencies beyond Python 3):
 python3 generate_sounds.py --melodies-only
 ```
 
-To regenerate speech files (requires AWS CLI with Polly access):
+To regenerate speech files with AWS Polly:
 
 ```
-python3 generate_sounds.py --speech-only
+python3 generate_sounds.py --speech-only --tts-provider polly
 ```
 
-You can narrow the scope with `--theme` and `--gender`.
+To regenerate speech files with ElevenLabs (requires `ffmpeg`):
+
+```
+python3 generate_sounds.py --speech-only --tts-provider elevenlabs --api-key YOUR_KEY --voice-id YOUR_VOICE_ID
+```
+
+You can narrow the scope with `--theme` and `--gender` (Polly).
+
+## Customizing speech phrases
+
+Edit `speech_phrases.json` to change what the voice says. Each theme has arrays
+of phrases for `stop`, `notification`, `stop_window`, and `notification_window`
+events. Use `{window}` as a placeholder for the tmux window number. After editing,
+regenerate speech files.
 
 ## License
 
