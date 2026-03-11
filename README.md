@@ -44,6 +44,7 @@ without any TTS credentials.
 ### ElevenLabs setup
 
 1. Get an API key from [elevenlabs.io/app/settings/api-keys](https://elevenlabs.io/app/settings/api-keys)
+   — only the **`text_to_speech`** permission is required (don't use "all" unless you need it)
 2. Pick a voice from the [Voice Library](https://elevenlabs.io/app/voice-library) and copy its voice ID
 3. Run `/configure-bells-and-whistles` and select ElevenLabs as the TTS provider
 4. Generate speech files:
