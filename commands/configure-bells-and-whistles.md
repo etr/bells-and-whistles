@@ -22,14 +22,35 @@ Map the response:
 - "Sound only" → `sound_only`
 - "Voice only" → `voice_only`
 
-### 2. Ask voice gender (if voice enabled)
+### 2. Ask accent (if voice enabled)
+If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
+- Question: "Which accent?"
+- Options: ["US English", "UK English"]
+
+Map: "US English" → `us`, "UK English" → `uk`
+
+If mode is `sound_only`, default accent to `us` (doesn't matter, won't be used).
+
+### 2b. Ask voice gender (if voice enabled)
 If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
 - Question: "Which voice?"
-- Options: ["Male (Matthew)", "Female (Joanna)"]
+- If accent is `us`: Options: ["Male (Stephen)", "Female (Tiffany)"]
+- If accent is `uk`: Options: ["Male (Brian)", "Female (Amy)"]
 
-Map: "Male (Matthew)" → `male`, "Female (Joanna)" → `female`
+Map the first word: "Male ..." → `male`, "Female ..." → `female`
 
 If mode is `sound_only`, default gender to `male` (doesn't matter, won't be used).
+
+### 2c. Ask voice style (if voice enabled)
+If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
+- Question: "What should the voice announce?"
+- Options: ["Full sentences (e.g. 'Job completed on window 5!')", "Just the window number (e.g. '5')"]
+
+Map:
+- "Full sentences (e.g. 'Job completed on window 5!')" → `full_sentence`
+- "Just the window number (e.g. '5')" → `number_only`
+
+If mode is `sound_only`, default voice_style to `full_sentence` (doesn't matter, won't be used).
 
 ### 3. Ask theme
 Use AskUserQuestion:
@@ -51,7 +72,9 @@ Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
 ```json
 {
   "mode": "<selected_mode>",
+  "accent": "<selected_accent>",
   "gender": "<selected_gender>",
+  "voice_style": "<selected_voice_style>",
   "theme": "<selected_theme>"
 }
 ```
@@ -63,7 +86,9 @@ Read `~/.claude/settings.json`. If it contains hook entries under `Stop` or `Not
 Print a summary:
 - Theme: <display name>
 - Mode: <display name>
+- Accent: <display name> (if applicable)
 - Gender: <display name> (if applicable)
+- Voice style: <display name> (if applicable)
 - Number of melody files available
 - Number of speech files available
 - Whether old hooks were cleaned up

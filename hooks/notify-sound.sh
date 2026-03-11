@@ -9,7 +9,7 @@ cat > /dev/null 2>/dev/null &
 # Resolve plugin root
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$(readlink -f "$BASH_SOURCE")")")}"
 
-# Read config (defaults: theme=beeps, mode=sound_and_voice, gender=male)
+# Read config (defaults: theme=beeps, mode=sound_and_voice, accent=us, gender=male, voice_style=full_sentence)
 CONFIG="$PLUGIN_ROOT/config.json"
 if [ -f "$CONFIG" ]; then
     eval "$(python3 -c "
@@ -17,12 +17,16 @@ import json, sys
 c = json.load(open(sys.argv[1]))
 print(f\"THEME={c.get('theme','beeps')}\")
 print(f\"MODE={c.get('mode','sound_and_voice')}\")
+print(f\"ACCENT={c.get('accent','us')}\")
 print(f\"GENDER={c.get('gender','male')}\")
+print(f\"VOICE_STYLE={c.get('voice_style','full_sentence')}\")
 " "$CONFIG" 2>/dev/null)"
 fi
 THEME="${THEME:-beeps}"
 MODE="${MODE:-sound_and_voice}"
+ACCENT="${ACCENT:-us}"
 GENDER="${GENDER:-male}"
+VOICE_STYLE="${VOICE_STYLE:-full_sentence}"
 
 SOUNDS_DIR="$PLUGIN_ROOT/sounds"
 
@@ -31,20 +35,28 @@ WIN=""
 [ -n "$TMUX_PANE" ] && WIN=$(tmux display-message -t "$TMUX_PANE" -p '#{window_index}' 2>/dev/null)
 
 # Determine speech WAV based on event type ($1: "stop" or "notification")
-SPEECH_DIR="$SOUNDS_DIR/speech/$GENDER"
+SPEECH_DIR="$SOUNDS_DIR/speech/$ACCENT/$GENDER"
 SPEECH=""
 if [ "$MODE" != "sound_only" ]; then
-    if [ "$1" = "stop" ]; then
-        if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/stop_window_${WIN}.wav" ]; then
-            SPEECH="$SPEECH_DIR/stop_window_${WIN}.wav"
-        elif [ -f "$SPEECH_DIR/stop.wav" ]; then
-            SPEECH="$SPEECH_DIR/stop.wav"
+    if [ "$VOICE_STYLE" = "number_only" ]; then
+        # Number-only mode: just announce the window number (no speech if not in tmux)
+        if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/number_${WIN}.wav" ]; then
+            SPEECH="$SPEECH_DIR/number_${WIN}.wav"
         fi
     else
-        if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/notification_window_${WIN}.wav" ]; then
-            SPEECH="$SPEECH_DIR/notification_window_${WIN}.wav"
-        elif [ -f "$SPEECH_DIR/notification.wav" ]; then
-            SPEECH="$SPEECH_DIR/notification.wav"
+        # Full sentence mode (default)
+        if [ "$1" = "stop" ]; then
+            if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/stop_window_${WIN}.wav" ]; then
+                SPEECH="$SPEECH_DIR/stop_window_${WIN}.wav"
+            elif [ -f "$SPEECH_DIR/stop.wav" ]; then
+                SPEECH="$SPEECH_DIR/stop.wav"
+            fi
+        else
+            if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/notification_window_${WIN}.wav" ]; then
+                SPEECH="$SPEECH_DIR/notification_window_${WIN}.wav"
+            elif [ -f "$SPEECH_DIR/notification.wav" ]; then
+                SPEECH="$SPEECH_DIR/notification.wav"
+            fi
         fi
     fi
 fi
