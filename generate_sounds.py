@@ -625,6 +625,7 @@ def expand_phrases(phrases: dict, theme: str) -> dict[str, str]:
 
     Falls back to 'default' theme if the requested theme has no speech entry.
     Expands {window} templates for window indices 0-9.
+    Also generates number_{i} entries for number-only voice style.
     """
     theme_phrases = phrases.get(theme, phrases['default'])
     result: dict[str, str] = {}
@@ -640,12 +641,15 @@ def expand_phrases(phrases: dict, theme: str) -> dict[str, str]:
                 text = template.replace('{window}', str(win_idx))
                 result[f'{event_type}_{win_idx}_{idx}'] = text
 
+    # Number-only voice style entries
+    for i in range(10):
+        result[f'number_{i}'] = str(i)
+
     return result
 
-
-POLLY_VOICES: dict[str, str] = {
-    'male': 'Matthew',
-    'female': 'Joanna',
+POLLY_VOICES: dict[str, dict[str, str]] = {
+    'us': {'male': 'Stephen', 'female': 'Tiffany'},
+    'uk': {'male': 'Brian', 'female': 'Amy'},
 }
 
 # ---------------------------------------------------------------------------
@@ -731,48 +735,52 @@ def generate_melodies(theme_filter: str | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 
-def generate_speech_polly(gender_filter: str | None = None, theme_filter: str | None = None) -> None:
+def generate_speech_polly(accent_filter: str | None = None, gender_filter: str | None = None,
+                          theme_filter: str | None = None) -> None:
     """Generate TTS speech WAV files using AWS Polly."""
     phrases = load_speech_phrases()
-    genders = {gender_filter: POLLY_VOICES[gender_filter]} if gender_filter else POLLY_VOICES
+    accents = {accent_filter: POLLY_VOICES[accent_filter]} if accent_filter else POLLY_VOICES
     themes_to_gen = [theme_filter] if theme_filter else list(phrases.keys())
 
-    for gender, voice_id in genders.items():
-        for theme in themes_to_gen:
-            expanded = expand_phrases(phrases, theme)
-            speech_dir = SOUNDS_DIR / 'speech' / gender / theme
-            speech_dir.mkdir(parents=True, exist_ok=True)
-            count = 0
+    for accent, genders in accents.items():
+        voices = {gender_filter: genders[gender_filter]} if gender_filter else genders
 
-            for name, text in expanded.items():
-                wav_path = speech_dir / f'{name}.wav'
+        for gender, voice_id in voices.items():
+            for theme in themes_to_gen:
+                expanded = expand_phrases(phrases, theme)
+                speech_dir = SOUNDS_DIR / 'speech' / accent / gender / theme
+                speech_dir.mkdir(parents=True, exist_ok=True)
+                count = 0
 
-                with tempfile.NamedTemporaryFile(suffix='.pcm', delete=False) as tmp:
-                    tmp_path = Path(tmp.name)
+                for name, text in expanded.items():
+                    wav_path = speech_dir / f'{name}.wav'
 
-                try:
-                    result = subprocess.run(
-                        [
-                            'aws', 'polly', 'synthesize-speech',
-                            '--engine', 'generative',
-                            '--voice-id', voice_id,
-                            '--output-format', 'pcm',
-                            '--sample-rate', str(POLLY_SAMPLE_RATE),
-                            '--text', text,
-                            str(tmp_path),
-                        ],
-                        capture_output=True, text=True,
-                    )
-                    if result.returncode != 0:
-                        print(f'  ERROR: Polly failed for {name}: {result.stderr.strip()}')
-                        continue
+                    with tempfile.NamedTemporaryFile(suffix='.pcm', delete=False) as tmp:
+                        tmp_path = Path(tmp.name)
 
-                    wrap_pcm_in_wav(tmp_path, wav_path)
-                    count += 1
-                finally:
-                    tmp_path.unlink(missing_ok=True)
+                    try:
+                        result = subprocess.run(
+                            [
+                                'aws', 'polly', 'synthesize-speech',
+                                '--engine', 'generative',
+                                '--voice-id', voice_id,
+                                '--output-format', 'pcm',
+                                '--sample-rate', str(POLLY_SAMPLE_RATE),
+                                '--text', text,
+                                str(tmp_path),
+                            ],
+                            capture_output=True, text=True,
+                        )
+                        if result.returncode != 0:
+                            print(f'  ERROR: Polly failed for {name}: {result.stderr.strip()}')
+                            continue
 
-            print(f'  -> {count} speech files ({gender}/{voice_id}) in speech/{gender}/{theme}/\n')
+                        wrap_pcm_in_wav(tmp_path, wav_path)
+                        count += 1
+                    finally:
+                        tmp_path.unlink(missing_ok=True)
+
+                print(f'  -> {count} speech files ({accent}/{gender}/{voice_id}) in speech/{accent}/{gender}/{theme}/\n')
 
 
 # ---------------------------------------------------------------------------
@@ -863,6 +871,7 @@ def main() -> None:
     parser.add_argument('--melodies-only', action='store_true', help='Only generate melodies')
     parser.add_argument('--speech-only', action='store_true', help='Only generate speech')
     parser.add_argument('--theme', choices=all_themes, help='Generate only one theme')
+    parser.add_argument('--accent', choices=['us', 'uk'], help='Generate only one accent (Polly)')
     parser.add_argument('--gender', choices=['male', 'female'], help='Generate only one gender (Polly)')
     parser.add_argument('--tts-provider', choices=['polly', 'elevenlabs'], default='polly',
                         help='TTS provider for speech generation (default: polly)')
@@ -884,7 +893,7 @@ def main() -> None:
             generate_speech_elevenlabs(args.api_key, args.voice_id, args.theme)
         else:
             print('=== Generating speech (AWS Polly) ===\n')
-            generate_speech_polly(args.gender, args.theme)
+            generate_speech_polly(args.accent, args.gender, args.theme)
 
     print('Done!')
 

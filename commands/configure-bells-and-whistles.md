@@ -31,14 +31,31 @@ Map: "AWS Polly (default)" → `polly`, "ElevenLabs" → `elevenlabs`
 
 If mode is `sound_only`, default to `polly`.
 
-### 3a. If Polly: Ask voice gender
+### 3a. If Polly: Ask accent
+Use AskUserQuestion:
+- Question: "Which accent?"
+- Options: ["US English", "UK English"]
+
+Map: "US English" → `us`, "UK English" → `uk`
+
+### 3b. If Polly: Ask voice gender
 Use AskUserQuestion:
 - Question: "Which voice?"
-- Options: ["Male (Matthew)", "Female (Joanna)"]
+- If accent is `us`: Options: ["Male (Stephen)", "Female (Tiffany)"]
+- If accent is `uk`: Options: ["Male (Brian)", "Female (Amy)"]
 
-Map: "Male (Matthew)" → `male`, "Female (Joanna)" → `female`
+Map the first word: "Male ..." → `male`, "Female ..." → `female`
 
-### 3b. If ElevenLabs: Ask for API key and voice ID
+### 3c. If Polly: Ask voice style
+Use AskUserQuestion:
+- Question: "What should the voice announce?"
+- Options: ["Full sentences (e.g. 'Job completed on window 5!')", "Just the window number (e.g. '5')"]
+
+Map:
+- "Full sentences (e.g. 'Job completed on window 5!')" → `full_sentence`
+- "Just the window number (e.g. '5')" → `number_only`
+
+### 3d. If ElevenLabs: Ask for API key and voice ID
 Use AskUserQuestion:
 - Question: "Enter your ElevenLabs API key (from elevenlabs.io/app/settings/api-keys):"
 
@@ -70,7 +87,9 @@ If Polly:
 {
   "mode": "<selected_mode>",
   "tts_provider": "polly",
+  "accent": "<selected_accent>",
   "gender": "<selected_gender>",
+  "voice_style": "<selected_voice_style>",
   "theme": "<selected_theme>"
 }
 ```
@@ -94,7 +113,9 @@ Print a summary:
 - Theme: <display name>
 - Mode: <display name>
 - TTS Provider: <display name>
+- Accent: <display name> (if Polly)
 - Voice: <gender or voice ID> (if applicable)
+- Voice style: <display name> (if Polly)
 - Number of melody files available
 - Number of speech files available
 - Whether old hooks were cleaned up

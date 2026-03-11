@@ -9,7 +9,7 @@ cat > /dev/null 2>/dev/null &
 # Resolve plugin root
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$(readlink -f "$BASH_SOURCE")")")}"
 
-# Read config (defaults: theme=beeps, mode=sound_and_voice, gender=male)
+# Read config (defaults: theme=beeps, mode=sound_and_voice, accent=us, gender=male, voice_style=full_sentence)
 CONFIG="$PLUGIN_ROOT/config.json"
 if [ -f "$CONFIG" ]; then
     eval "$(python3 -c "
@@ -17,14 +17,18 @@ import json, shlex, sys
 c = json.load(open(sys.argv[1]))
 print(f'THEME={shlex.quote(c.get(\"theme\",\"beeps\"))}')
 print(f'MODE={shlex.quote(c.get(\"mode\",\"sound_and_voice\"))}')
+print(f'ACCENT={shlex.quote(c.get(\"accent\",\"us\"))}')
 print(f'GENDER={shlex.quote(c.get(\"gender\",\"male\"))}')
+print(f'VOICE_STYLE={shlex.quote(c.get(\"voice_style\",\"full_sentence\"))}')
 print(f'TTS_PROVIDER={shlex.quote(c.get(\"tts_provider\",\"polly\"))}')
 print(f'ELEVENLABS_VOICE_ID={shlex.quote(c.get(\"elevenlabs_voice_id\",\"\"))}')
 " "$CONFIG" 2>/dev/null)"
 fi
 THEME="${THEME:-beeps}"
 MODE="${MODE:-sound_and_voice}"
+ACCENT="${ACCENT:-us}"
 GENDER="${GENDER:-male}"
+VOICE_STYLE="${VOICE_STYLE:-full_sentence}"
 TTS_PROVIDER="${TTS_PROVIDER:-polly}"
 ELEVENLABS_VOICE_ID="${ELEVENLABS_VOICE_ID:-}"
 
@@ -38,7 +42,7 @@ WIN=""
 if [ "$TTS_PROVIDER" = "elevenlabs" ] && [ -n "$ELEVENLABS_VOICE_ID" ]; then
     SPEECH_BASE="$SOUNDS_DIR/speech/elevenlabs/$ELEVENLABS_VOICE_ID"
 else
-    SPEECH_BASE="$SOUNDS_DIR/speech/$GENDER"
+    SPEECH_BASE="$SOUNDS_DIR/speech/$ACCENT/$GENDER"
 fi
 
 # Determine speech theme directory (try theme-specific, fall back to default)
@@ -47,31 +51,48 @@ if [ -d "$SPEECH_BASE/$THEME" ]; then
 elif [ -d "$SPEECH_BASE/default" ]; then
     SPEECH_DIR="$SPEECH_BASE/default"
 else
-    SPEECH_DIR=""
+    # Legacy flat layout (no theme subdirs) — check base dir directly
+    SPEECH_DIR="$SPEECH_BASE"
 fi
 
 # Pick a random speech WAV
 SPEECH=""
 if [ "$MODE" != "sound_only" ] && [ -n "$SPEECH_DIR" ]; then
-    if [ "$1" = "stop" ]; then
-        PREFIX="stop"
-    else
-        PREFIX="notification"
-    fi
-
-    # Try window-specific phrases first
-    if [ -n "$WIN" ]; then
-        SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_window_${WIN}_*.wav)
-        if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
-            SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
+    if [ "$VOICE_STYLE" = "number_only" ]; then
+        # Number-only mode: just announce the window number (no speech if not in tmux)
+        if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/number_${WIN}.wav" ]; then
+            SPEECH="$SPEECH_DIR/number_${WIN}.wav"
         fi
-    fi
+    else
+        # Full sentence mode (default) — with random phrase selection
+        if [ "$1" = "stop" ]; then
+            PREFIX="stop"
+        else
+            PREFIX="notification"
+        fi
 
-    # Fall back to non-window phrases
-    if [ -z "$SPEECH" ]; then
-        SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_[0-9]*.wav)
-        if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
-            SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
+        # Try window-specific phrases first (randomized)
+        if [ -n "$WIN" ]; then
+            SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_window_${WIN}_*.wav)
+            if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
+                SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
+            fi
+            # Legacy single-file fallback
+            if [ -z "$SPEECH" ] && [ -f "$SPEECH_DIR/${PREFIX}_window_${WIN}.wav" ]; then
+                SPEECH="$SPEECH_DIR/${PREFIX}_window_${WIN}.wav"
+            fi
+        fi
+
+        # Fall back to non-window phrases (randomized)
+        if [ -z "$SPEECH" ]; then
+            SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_[0-9]*.wav)
+            if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
+                SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
+            fi
+            # Legacy single-file fallback
+            if [ -z "$SPEECH" ] && [ -f "$SPEECH_DIR/${PREFIX}.wav" ]; then
+                SPEECH="$SPEECH_DIR/${PREFIX}.wav"
+            fi
         fi
     fi
 fi
