@@ -57,15 +57,6 @@ Requires `ffmpeg` installed for MP3→WAV conversion.
 
 ## Installation
 
-### From GitHub
-
-Add the marketplace, then install:
-
-```
-/plugin marketplace add jackmarketon/bells-and-whistles
-/plugin install bells-and-whistles@jackmarketon-bells-and-whistles
-```
-
 ### From a local clone
 
 ```bash
@@ -76,7 +67,7 @@ Then in Claude Code:
 
 ```
 /plugin marketplace add /path/to/bells-and-whistles
-/plugin install bells-and-whistles@bells-and-whistles
+/reload-plugins
 ```
 
 ### Setup
