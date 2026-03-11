@@ -4,9 +4,12 @@
 import argparse
 import json
 import math
+import shutil
 import struct
 import subprocess
 import tempfile
+import urllib.error
+import urllib.request
 import wave
 from pathlib import Path
 
@@ -770,6 +773,83 @@ def generate_speech_polly(gender_filter: str | None = None, theme_filter: str | 
                     tmp_path.unlink(missing_ok=True)
 
             print(f'  -> {count} speech files ({gender}/{voice_id}) in speech/{gender}/{theme}/\n')
+
+
+# ---------------------------------------------------------------------------
+# Speech generation (ElevenLabs)
+# ---------------------------------------------------------------------------
+
+
+def generate_speech_elevenlabs(api_key: str, voice_id: str, theme_filter: str | None = None) -> None:
+    """Generate TTS speech WAV files using ElevenLabs API."""
+    if not shutil.which('ffmpeg'):
+        print('  ERROR: ffmpeg not found. Install ffmpeg to generate ElevenLabs speech.')
+        print('  Skipping speech generation.\n')
+        return
+
+    phrases = load_speech_phrases()
+    themes_to_gen = [theme_filter] if theme_filter else list(phrases.keys())
+
+    for theme in themes_to_gen:
+        expanded = expand_phrases(phrases, theme)
+        speech_dir = SOUNDS_DIR / 'speech' / 'elevenlabs' / voice_id / theme
+        speech_dir.mkdir(parents=True, exist_ok=True)
+        count = 0
+
+        for name, text in expanded.items():
+            wav_path = speech_dir / f'{name}.wav'
+
+            try:
+                url = f'https://api.elevenlabs.io/v1/text-to-speech/{voice_id}'
+                body = json.dumps({
+                    'text': text,
+                    'model_id': 'eleven_multilingual_v2',
+                }).encode()
+                req = urllib.request.Request(
+                    url,
+                    data=body,
+                    headers={
+                        'xi-api-key': api_key,
+                        'Content-Type': 'application/json',
+                        'Accept': 'audio/mpeg',
+                    },
+                )
+                with urllib.request.urlopen(req) as resp:
+                    mp3_data = resp.read()
+
+            except urllib.error.HTTPError as e:
+                print(f'  ERROR: ElevenLabs API error for "{name}": {e.code} {e.reason}')
+                continue
+            except urllib.error.URLError as e:
+                print(f'  ERROR: Network error for "{name}": {e.reason}')
+                continue
+
+            # Write MP3 to temp file, convert to WAV with ffmpeg
+            with tempfile.NamedTemporaryFile(suffix='.mp3', delete=False) as tmp:
+                tmp_path = Path(tmp.name)
+                tmp.write(mp3_data)
+
+            try:
+                result = subprocess.run(
+                    [
+                        'ffmpeg', '-y', '-i', str(tmp_path),
+                        '-ar', str(POLLY_SAMPLE_RATE),
+                        '-ac', '1',
+                        '-sample_fmt', 's16',
+                        '-f', 'wav',
+                        str(wav_path),
+                    ],
+                    capture_output=True, text=True,
+                )
+                if result.returncode != 0:
+                    print(f'  ERROR: ffmpeg conversion failed for {name}: {result.stderr.strip()}')
+                    continue
+
+                count += 1
+            finally:
+                tmp_path.unlink(missing_ok=True)
+
+        print(f'  -> {count} speech files (elevenlabs/{voice_id}) in speech/elevenlabs/{voice_id}/{theme}/\n')
 
 
 # ---------------------------------------------------------------------------
