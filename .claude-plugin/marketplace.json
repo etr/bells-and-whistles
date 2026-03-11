@@ -1,0 +1,13 @@
+{
+  "name": "bells-and-whistles",
+  "owner": {
+    "name": "Jackson Marketon"
+  },
+  "plugins": [
+    {
+      "name": "bells-and-whistles",
+      "source": "./plugins/bells-and-whistles",
+      "description": "Play notification sounds and voice announcements when Claude Code stops or needs attention"
+    }
+  ]
+}
