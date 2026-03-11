@@ -18,11 +18,15 @@ c = json.load(open(sys.argv[1]))
 print(f\"THEME={c.get('theme','beeps')}\")
 print(f\"MODE={c.get('mode','sound_and_voice')}\")
 print(f\"GENDER={c.get('gender','male')}\")
+print(f\"TTS_PROVIDER={c.get('tts_provider','polly')}\")
+print(f\"ELEVENLABS_VOICE_ID={c.get('elevenlabs_voice_id','')}\")
 " "$CONFIG" 2>/dev/null)"
 fi
 THEME="${THEME:-beeps}"
 MODE="${MODE:-sound_and_voice}"
 GENDER="${GENDER:-male}"
+TTS_PROVIDER="${TTS_PROVIDER:-polly}"
+ELEVENLABS_VOICE_ID="${ELEVENLABS_VOICE_ID:-}"
 
 SOUNDS_DIR="$PLUGIN_ROOT/sounds"
 
@@ -30,21 +34,44 @@ SOUNDS_DIR="$PLUGIN_ROOT/sounds"
 WIN=""
 [ -n "$TMUX_PANE" ] && WIN=$(tmux display-message -t "$TMUX_PANE" -p '#{window_index}' 2>/dev/null)
 
-# Determine speech WAV based on event type ($1: "stop" or "notification")
-SPEECH_DIR="$SOUNDS_DIR/speech/$GENDER"
+# Resolve speech base directory based on TTS provider
+if [ "$TTS_PROVIDER" = "elevenlabs" ] && [ -n "$ELEVENLABS_VOICE_ID" ]; then
+    SPEECH_BASE="$SOUNDS_DIR/speech/elevenlabs/$ELEVENLABS_VOICE_ID"
+else
+    SPEECH_BASE="$SOUNDS_DIR/speech/$GENDER"
+fi
+
+# Determine speech theme directory (try theme-specific, fall back to default)
+if [ -d "$SPEECH_BASE/$THEME" ]; then
+    SPEECH_DIR="$SPEECH_BASE/$THEME"
+elif [ -d "$SPEECH_BASE/default" ]; then
+    SPEECH_DIR="$SPEECH_BASE/default"
+else
+    SPEECH_DIR=""
+fi
+
+# Pick a random speech WAV
 SPEECH=""
-if [ "$MODE" != "sound_only" ]; then
+if [ "$MODE" != "sound_only" ] && [ -n "$SPEECH_DIR" ]; then
     if [ "$1" = "stop" ]; then
-        if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/stop_window_${WIN}.wav" ]; then
-            SPEECH="$SPEECH_DIR/stop_window_${WIN}.wav"
-        elif [ -f "$SPEECH_DIR/stop.wav" ]; then
-            SPEECH="$SPEECH_DIR/stop.wav"
-        fi
+        PREFIX="stop"
     else
-        if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/notification_window_${WIN}.wav" ]; then
-            SPEECH="$SPEECH_DIR/notification_window_${WIN}.wav"
-        elif [ -f "$SPEECH_DIR/notification.wav" ]; then
-            SPEECH="$SPEECH_DIR/notification.wav"
+        PREFIX="notification"
+    fi
+
+    # Try window-specific phrases first
+    if [ -n "$WIN" ]; then
+        SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_window_${WIN}_*.wav)
+        if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
+            SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
+        fi
+    fi
+
+    # Fall back to non-window phrases
+    if [ -z "$SPEECH" ]; then
+        SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_[0-9]*.wav)
+        if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
+            SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
         fi
     fi
 fi
