@@ -57,17 +57,29 @@ Requires `ffmpeg` installed for MP3→WAV conversion.
 
 ## Installation
 
-Install from the Groundwork Marketplace. Add the marketplace once:
+### From GitHub
+
+Add the marketplace, then install:
 
 ```
-claude plugin marketplace add etr/groundwork-marketplace
+/plugin marketplace add jackmarketon/bells-and-whistles
+/plugin install bells-and-whistles@jackmarketon-bells-and-whistles
 ```
 
-Then install the plugin:
+### From a local clone
+
+```bash
+git clone git@github.com:jackmarketon/bells-and-whistles.git
+```
+
+Then in Claude Code:
 
 ```
-claude plugin install bells-and-whistles@groundwork-marketplace
+/plugin marketplace add /path/to/bells-and-whistles
+/plugin install bells-and-whistles@bells-and-whistles
 ```
+
+### Setup
 
 Run the built-in setup command to choose your theme, mode, and voice:
 
@@ -77,20 +89,6 @@ Run the built-in setup command to choose your theme, mode, and voice:
 
 That writes a `config.json` in the plugin root and cleans up any old hook
 configurations.
-
-To update later:
-
-```
-claude plugin update bells-and-whistles@groundwork-marketplace
-```
-
-### Manual installation
-
-If you prefer to clone the repo yourself:
-
-```
-claude plugins add /path/to/bells-and-whistles
-```
 
 ## Configuration
 
