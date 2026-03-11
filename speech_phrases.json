@@ -7,10 +7,10 @@
   },
   "cyberpunk": {
     "stop": [
-      "Flatline complete, choom!",
+      "Deets Klepped, choom!",
       "Preem work. Delta out.",
       "Job's done. Go touch some grass, gonk.",
-      "Nova output, choombatta.",
+      "Nova time to delta, choombatta.",
       "Eddies earned. Slot in when ready."
     ],
     "notification": [
@@ -18,36 +18,30 @@
       "Wake up, samurai — permission needed.",
       "Got a gig for you, merc.",
       "Choom! Eyes on deck!",
-      "V, pick up — got a situation."
+      "Merc, pick up — got a situation."
     ],
-    "stop_window": [
-      "Flatline complete on window {window}, choom!",
-      "Preem work on window {window}. Delta out."
-    ],
+    "stop_window": ["Detes complete on window {window}, choom!", "Preem work on window {window}. Delta out."],
     "notification_window": [
       "Hey choom! Window {window} needs your input!",
-      "Wake up, samurai — window {window} needs you."
+      "Wake up, merc — window {window} needs you."
     ]
   },
   "dnd": {
     "stop": [
       "Quest complete! Roll for loot.",
-      "The party rests. Long rest granted.",
+      "The party rests.",
       "Victory! The bard begins composing.",
-      "Encounter resolved. XP awarded.",
+      "Encounter resolved. Rewarding XP.",
       "The dungeon master nods approvingly."
     ],
     "notification": [
       "Roll for initiative!",
       "The DM requires your attention!",
-      "A wild permission prompt appears!",
-      "Halt, adventurer — choice required!",
+      "A wild owl bear appears!",
+      "Halt, adventurer — actions required!",
       "The oracle seeks your guidance!"
     ],
-    "stop_window": [
-      "Quest complete on window {window}! Roll for loot.",
-      "Window {window} encounter resolved. XP awarded."
-    ],
+    "stop_window": ["Quest complete on window {window}!", "Window {window} encounter resolved. Get your XP reward"],
     "notification_window": [
       "Roll for initiative! Window {window}!",
       "The DM requires your attention on window {window}!"
