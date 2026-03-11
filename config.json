@@ -1,5 +1,7 @@
 {
-  "mode": "sound_and_voice",
-  "gender": "male",
-  "theme": "videogame"
+  "mode": "voice_only",
+  "tts_provider": "elevenlabs",
+  "elevenlabs_api_key": "sk_60a73d39abbb6fa86d6784505585dc7177633d20f0866560",
+  "elevenlabs_voice_id": "y60Y0vfvctVuEedJcwQ4",
+  "theme": "cyberpunk"
 }
