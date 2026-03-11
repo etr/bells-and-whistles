@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate notification melodies (7 themes x 10) and AWS Polly speech WAVs."""
+"""Generate notification melodies (10 themes x 10) and TTS speech WAVs (Polly or ElevenLabs)."""
 
 import argparse
 import json
