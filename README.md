@@ -71,7 +71,7 @@ claude plugin install bells-and-whistles@groundwork-marketplace
 Run the built-in setup command to choose your theme, mode, and voice:
 
 ```
-/install-bells-and-whistles
+/configure-bells-and-whistles
 ```
 
 That writes a `config.json` in the plugin root and cleans up any old hook

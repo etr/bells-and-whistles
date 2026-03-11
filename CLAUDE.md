@@ -11,11 +11,11 @@ bells-and-whistles is a Claude Code plugin that plays notification sounds (and o
 - **Plugin manifest**: `.claude-plugin/plugin.json` — declares the plugin name/version for Claude Code.
 - **Hooks**: `hooks/hooks.json` registers shell hooks for `Stop` and `Notification` (permission_prompt, elicitation_dialog) events. These invoke `hooks/notify-sound.sh` with `stop` or `notification` as the argument.
 - **notify-sound.sh**: Main runtime script. Reads `config.json`, picks a random melody WAV from the selected theme, optionally queues a speech WAV, and plays them via platform-specific commands (`afplay` on macOS, `aplay`/`paplay` on Linux, `powershell.exe` on WSL, terminal bell over SSH). Drains stdin first since hooks receive JSON on stdin.
-- **config.json**: User configuration — `mode` (sound_and_voice | sound_only | voice_only), `gender` (male | female), `theme` (videogame | disney | anime | movies | 90s_rock | classical | beeps | chirps).
+- **config.json**: User configuration — `mode` (sound_and_voice | sound_only | voice_only), `tts_provider` (polly | elevenlabs), `gender` (male | female, Polly only), `elevenlabs_api_key` + `elevenlabs_voice_id` (ElevenLabs only), `theme` (videogame | disney | anime | movies | 90s_rock | classical | beeps | chirps | cyberpunk | dnd).
 - **speech_phrases.json**: Editable speech phrase definitions per theme. Read at generation time only (not at runtime). Contains `stop`, `notification`, `stop_window`, `notification_window` phrase arrays per theme with `{window}` template support.
-- **generate_sounds.py**: Pure-Python WAV generator (no dependencies beyond stdlib). Defines all melody note sequences as `(freq_hz, duration_ms)` tuples in the `THEMES` dict. Also generates speech WAVs via AWS Polly CLI.
+- **generate_sounds.py**: Pure-Python WAV generator (no dependencies beyond stdlib for melodies). Defines all melody note sequences as `(freq_hz, duration_ms)` tuples in the `THEMES` dict. Generates speech WAVs via AWS Polly CLI or ElevenLabs REST API (requires `ffmpeg` for MP3→WAV).
 - **commands/configure-bells-and-whistles.md**: Slash command definition that walks users through interactive setup.
-- **sounds/**: Pre-generated WAVs organized as `sounds/<theme>/<melody>.wav` and `sounds/speech/<gender>/<phrase>.wav`. 8 themes × 10 melodies each, plus speech files for stop/notification with tmux window variants.
+- **sounds/**: Pre-generated WAVs organized as `sounds/<theme>/<melody>.wav` and `sounds/speech/<gender>/<phrase>.wav`. 10 themes × 10 melodies each, plus speech files for stop/notification with tmux window variants.
 
 ## Common Commands
 

@@ -13,13 +13,13 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$(readlink -f "$BASH_SO
 CONFIG="$PLUGIN_ROOT/config.json"
 if [ -f "$CONFIG" ]; then
     eval "$(python3 -c "
-import json, sys
+import json, shlex, sys
 c = json.load(open(sys.argv[1]))
-print(f\"THEME={c.get('theme','beeps')}\")
-print(f\"MODE={c.get('mode','sound_and_voice')}\")
-print(f\"GENDER={c.get('gender','male')}\")
-print(f\"TTS_PROVIDER={c.get('tts_provider','polly')}\")
-print(f\"ELEVENLABS_VOICE_ID={c.get('elevenlabs_voice_id','')}\")
+print(f'THEME={shlex.quote(c.get(\"theme\",\"beeps\"))}')
+print(f'MODE={shlex.quote(c.get(\"mode\",\"sound_and_voice\"))}')
+print(f'GENDER={shlex.quote(c.get(\"gender\",\"male\"))}')
+print(f'TTS_PROVIDER={shlex.quote(c.get(\"tts_provider\",\"polly\"))}')
+print(f'ELEVENLABS_VOICE_ID={shlex.quote(c.get(\"elevenlabs_voice_id\",\"\"))}')
 " "$CONFIG" 2>/dev/null)"
 fi
 THEME="${THEME:-beeps}"
