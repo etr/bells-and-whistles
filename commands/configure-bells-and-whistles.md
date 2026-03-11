@@ -22,19 +22,33 @@ Map the response:
 - "Sound only" → `sound_only`
 - "Voice only" → `voice_only`
 
-### 2. Ask voice gender (if voice enabled)
+### 2. Ask TTS provider (if voice enabled)
 If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
+- Question: "Which text-to-speech provider?"
+- Options: ["AWS Polly (default)", "ElevenLabs"]
+
+Map: "AWS Polly (default)" → `polly`, "ElevenLabs" → `elevenlabs`
+
+If mode is `sound_only`, default to `polly`.
+
+### 3a. If Polly: Ask voice gender
+Use AskUserQuestion:
 - Question: "Which voice?"
 - Options: ["Male (Matthew)", "Female (Joanna)"]
 
 Map: "Male (Matthew)" → `male`, "Female (Joanna)" → `female`
 
-If mode is `sound_only`, default gender to `male` (doesn't matter, won't be used).
+### 3b. If ElevenLabs: Ask for API key and voice ID
+Use AskUserQuestion:
+- Question: "Enter your ElevenLabs API key (from elevenlabs.io/app/settings/api-keys):"
 
-### 3. Ask theme
+Then use AskUserQuestion:
+- Question: "Enter your ElevenLabs voice ID (from elevenlabs.io/app/voice-library):"
+
+### 4. Ask theme
 Use AskUserQuestion:
 - Question: "Pick a notification sound theme:"
-- Options: ["Videogame", "Disney Adults", "Anime", "Movie Addicts", "90s Rock", "Classical Music", "Beeps/Tones", "Chirps"]
+- Options: ["Videogame", "Disney Adults", "Anime", "Movie Addicts", "90s Rock", "Classical Music", "Beeps/Tones", "Chirps", "Cyberpunk 2077", "D&D / Fantasy"]
 
 Map:
 - "Videogame" → `videogame`
@@ -45,25 +59,42 @@ Map:
 - "Classical Music" → `classical`
 - "Beeps/Tones" → `beeps`
 - "Chirps" → `chirps`
+- "Cyberpunk 2077" → `cyberpunk`
+- "D&D / Fantasy" → `dnd`
 
-### 4. Write config
-Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
+### 5. Write config
+Write `${CLAUDE_PLUGIN_ROOT}/config.json`.
+
+If Polly:
 ```json
 {
   "mode": "<selected_mode>",
+  "tts_provider": "polly",
   "gender": "<selected_gender>",
   "theme": "<selected_theme>"
 }
 ```
 
-### 5. Clean up old hooks
+If ElevenLabs:
+```json
+{
+  "mode": "<selected_mode>",
+  "tts_provider": "elevenlabs",
+  "elevenlabs_api_key": "<api_key>",
+  "elevenlabs_voice_id": "<voice_id>",
+  "theme": "<selected_theme>"
+}
+```
+
+### 6. Clean up old hooks
 Read `~/.claude/settings.json`. If it contains hook entries under `Stop` or `Notification` that reference `~/.claude/hooks/notify-sound.sh`, remove those specific entries (but preserve any other hooks and all other settings). Write back the cleaned file.
 
-### 6. Summary
+### 7. Summary
 Print a summary:
 - Theme: <display name>
 - Mode: <display name>
-- Gender: <display name> (if applicable)
+- TTS Provider: <display name>
+- Voice: <gender or voice ID> (if applicable)
 - Number of melody files available
 - Number of speech files available
 - Whether old hooks were cleaned up
