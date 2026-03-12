@@ -198,3 +198,6 @@ You can narrow the scope with `--theme`, `--accent`, and `--gender`.
 
 Do what you want with it. If the Zelda secret-discovery sound helps you ship
 faster, that is reward enough.
+
+## Special Thanks
+- https://github.com/jackmarketon for Elevenlabs integration, D&D/Cyberpunk audio, and configurable phrases.
