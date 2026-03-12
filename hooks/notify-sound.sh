@@ -13,13 +13,14 @@ PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$(readlink -f "$BASH_SO
 CONFIG="$PLUGIN_ROOT/config.json"
 if [ -f "$CONFIG" ]; then
     eval "$(python3 -c "
-import json, sys
+import json, shlex, sys
 c = json.load(open(sys.argv[1]))
-print(f\"THEME={c.get('theme','beeps')}\")
-print(f\"MODE={c.get('mode','sound_and_voice')}\")
-print(f\"ACCENT={c.get('accent','us')}\")
-print(f\"GENDER={c.get('gender','male')}\")
-print(f\"VOICE_STYLE={c.get('voice_style','full_sentence')}\")
+print(f'THEME={shlex.quote(c.get(\"theme\",\"beeps\"))}')
+print(f'MODE={shlex.quote(c.get(\"mode\",\"sound_and_voice\"))}')
+print(f'ACCENT={shlex.quote(c.get(\"accent\",\"us\"))}')
+print(f'GENDER={shlex.quote(c.get(\"gender\",\"male\"))}')
+print(f'VOICE_STYLE={shlex.quote(c.get(\"voice_style\",\"full_sentence\"))}')
+print(f'USE_THEMED_PHRASES={shlex.quote(str(c.get(\"use_themed_phrases\",False)).lower())}')
 " "$CONFIG" 2>/dev/null)"
 fi
 THEME="${THEME:-beeps}"
@@ -27,6 +28,7 @@ MODE="${MODE:-sound_and_voice}"
 ACCENT="${ACCENT:-us}"
 GENDER="${GENDER:-male}"
 VOICE_STYLE="${VOICE_STYLE:-full_sentence}"
+USE_THEMED_PHRASES="${USE_THEMED_PHRASES:-false}"
 
 SOUNDS_DIR="$PLUGIN_ROOT/sounds"
 
@@ -34,28 +36,42 @@ SOUNDS_DIR="$PLUGIN_ROOT/sounds"
 WIN=""
 [ -n "$TMUX_PANE" ] && WIN=$(tmux display-message -t "$TMUX_PANE" -p '#{window_index}' 2>/dev/null)
 
-# Determine speech WAV based on event type ($1: "stop" or "notification")
-SPEECH_DIR="$SOUNDS_DIR/speech/$ACCENT/$GENDER"
+# Resolve speech directory based on themed/standard preference
+if [ "$USE_THEMED_PHRASES" = "true" ] && [ -d "$SOUNDS_DIR/speech/themed/$THEME" ]; then
+    SPEECH_DIR="$SOUNDS_DIR/speech/themed/$THEME"
+else
+    SPEECH_DIR="$SOUNDS_DIR/speech/$ACCENT/$GENDER"
+fi
+
+# Pick a speech WAV
 SPEECH=""
-if [ "$MODE" != "sound_only" ]; then
+if [ "$MODE" != "sound_only" ] && [ -d "$SPEECH_DIR" ]; then
     if [ "$VOICE_STYLE" = "number_only" ]; then
         # Number-only mode: just announce the window number (no speech if not in tmux)
         if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/number_${WIN}.wav" ]; then
             SPEECH="$SPEECH_DIR/number_${WIN}.wav"
         fi
     else
-        # Full sentence mode (default)
+        # Full sentence mode (default) — random phrase selection
         if [ "$1" = "stop" ]; then
-            if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/stop_window_${WIN}.wav" ]; then
-                SPEECH="$SPEECH_DIR/stop_window_${WIN}.wav"
-            elif [ -f "$SPEECH_DIR/stop.wav" ]; then
-                SPEECH="$SPEECH_DIR/stop.wav"
-            fi
+            PREFIX="stop"
         else
-            if [ -n "$WIN" ] && [ -f "$SPEECH_DIR/notification_window_${WIN}.wav" ]; then
-                SPEECH="$SPEECH_DIR/notification_window_${WIN}.wav"
-            elif [ -f "$SPEECH_DIR/notification.wav" ]; then
-                SPEECH="$SPEECH_DIR/notification.wav"
+            PREFIX="notification"
+        fi
+
+        # Try window-specific phrases first (randomized)
+        if [ -n "$WIN" ]; then
+            SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_window_${WIN}_*.wav)
+            if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
+                SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
+            fi
+        fi
+
+        # Fall back to non-window phrases (randomized)
+        if [ -z "$SPEECH" ]; then
+            SPEECH_WAVS=("$SPEECH_DIR"/${PREFIX}_[0-9]*.wav)
+            if [ ${#SPEECH_WAVS[@]} -gt 0 ] && [ -f "${SPEECH_WAVS[0]}" ]; then
+                SPEECH="${SPEECH_WAVS[$((RANDOM % ${#SPEECH_WAVS[@]}))]}"
             fi
         fi
     fi

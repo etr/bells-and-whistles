@@ -22,40 +22,10 @@ Map the response:
 - "Sound only" → `sound_only`
 - "Voice only" → `voice_only`
 
-### 2. Ask accent (if voice enabled)
-If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
-- Question: "Which accent?"
-- Options: ["US English", "UK English"]
-
-Map: "US English" → `us`, "UK English" → `uk`
-
-If mode is `sound_only`, default accent to `us` (doesn't matter, won't be used).
-
-### 2b. Ask voice gender (if voice enabled)
-If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
-- Question: "Which voice?"
-- If accent is `us`: Options: ["Male (Stephen)", "Female (Tiffany)"]
-- If accent is `uk`: Options: ["Male (Brian)", "Female (Amy)"]
-
-Map the first word: "Male ..." → `male`, "Female ..." → `female`
-
-If mode is `sound_only`, default gender to `male` (doesn't matter, won't be used).
-
-### 2c. Ask voice style (if voice enabled)
-If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
-- Question: "What should the voice announce?"
-- Options: ["Full sentences (e.g. 'Job completed on window 5!')", "Just the window number (e.g. '5')"]
-
-Map:
-- "Full sentences (e.g. 'Job completed on window 5!')" → `full_sentence`
-- "Just the window number (e.g. '5')" → `number_only`
-
-If mode is `sound_only`, default voice_style to `full_sentence` (doesn't matter, won't be used).
-
-### 3. Ask theme
+### 2. Ask theme
 Use AskUserQuestion:
 - Question: "Pick a notification sound theme:"
-- Options: ["Videogame", "Disney Adults", "Anime", "Movie Addicts", "90s Rock", "Classical Music", "Beeps/Tones", "Chirps"]
+- Options: ["Videogame", "Disney Adults", "Anime", "Movie Addicts", "90s Rock", "Classical Music", "Beeps/Tones", "Chirps", "Cyberpunk 2077", "D&D / Fantasy"]
 
 Map:
 - "Videogame" → `videogame`
@@ -66,8 +36,56 @@ Map:
 - "Classical Music" → `classical`
 - "Beeps/Tones" → `beeps`
 - "Chirps" → `chirps`
+- "Cyberpunk 2077" → `cyberpunk`
+- "D&D / Fantasy" → `dnd`
 
-### 4. Write config
+### 3. Check for themed phrases (if voice enabled)
+If the mode includes voice (`sound_and_voice` or `voice_only`):
+
+Read `${CLAUDE_PLUGIN_ROOT}/speech_phrases.json`. Check if the selected theme has its own entry (i.e., a key other than `"default"` matching the theme name).
+
+If the theme has custom phrases, use AskUserQuestion:
+- Question: "The [theme] theme has custom themed phrases (e.g., '[first stop phrase from the theme]'). Use themed phrases or standard ones?"
+- Options: ["Themed phrases", "Standard phrases"]
+
+Set `use_themed_phrases`:
+- "Themed phrases" → `true`
+- "Standard phrases" → `false`
+
+If the theme does NOT have custom phrases, set `use_themed_phrases` to `false`.
+
+If mode is `sound_only`, set `use_themed_phrases` to `false`.
+
+### 4. Ask accent and gender (if voice enabled AND NOT using themed phrases)
+If the mode includes voice (`sound_and_voice` or `voice_only`) AND `use_themed_phrases` is `false`:
+
+Use AskUserQuestion to ask accent:
+- Question: "Which accent?"
+- Options: ["US English", "UK English"]
+
+Map: "US English" → `us`, "UK English" → `uk`
+
+Then use AskUserQuestion to ask voice gender:
+- Question: "Which voice?"
+- If accent is `us`: Options: ["Male (Stephen)", "Female (Tiffany)"]
+- If accent is `uk`: Options: ["Male (Brian)", "Female (Amy)"]
+
+Map the first word: "Male ..." → `male`, "Female ..." → `female`
+
+If mode is `sound_only` OR `use_themed_phrases` is `true`, default accent to `us` and gender to `male`.
+
+### 5. Ask voice style (if voice enabled)
+If the mode includes voice (`sound_and_voice` or `voice_only`), use AskUserQuestion:
+- Question: "What should the voice announce?"
+- Options: ["Full sentences (e.g. 'Job completed on window 5!')", "Just the window number (e.g. '5')"]
+
+Map:
+- "Full sentences (e.g. 'Job completed on window 5!')" → `full_sentence`
+- "Just the window number (e.g. '5')" → `number_only`
+
+If mode is `sound_only`, default voice_style to `full_sentence`.
+
+### 6. Write config
 Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
 ```json
 {
@@ -75,19 +93,19 @@ Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
   "accent": "<selected_accent>",
   "gender": "<selected_gender>",
   "voice_style": "<selected_voice_style>",
-  "theme": "<selected_theme>"
+  "theme": "<selected_theme>",
+  "use_themed_phrases": <true_or_false>
 }
 ```
 
-### 5. Clean up old hooks
+### 7. Clean up old hooks
 Read `~/.claude/settings.json`. If it contains hook entries under `Stop` or `Notification` that reference `~/.claude/hooks/notify-sound.sh`, remove those specific entries (but preserve any other hooks and all other settings). Write back the cleaned file.
 
-### 6. Summary
+### 8. Summary
 Print a summary:
 - Theme: <display name>
 - Mode: <display name>
-- Accent: <display name> (if applicable)
-- Gender: <display name> (if applicable)
+- Speech: "themed phrases" or "standard (<accent> <gender>)" (if applicable)
 - Voice style: <display name> (if applicable)
 - Number of melody files available
 - Number of speech files available
