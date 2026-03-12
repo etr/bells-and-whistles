@@ -3,8 +3,23 @@
 # Cross-platform: WSL, macOS, native Linux. Falls back to terminal bell over SSH.
 # Reads config from $CLAUDE_PLUGIN_ROOT/config.json for theme, mode, and gender.
 
-# Drain stdin (hook receives JSON on stdin)
-cat > /dev/null 2>/dev/null &
+# Read hook JSON from stdin
+HOOK_JSON=$(cat)
+
+# Skip notification when exiting plan mode (not a real job completion)
+if [ "$1" = "stop" ]; then
+    TRANSCRIPT=$(python3 -c "
+import json, sys, os
+d = json.loads(sys.argv[1])
+p = d.get('transcript_path', '')
+print(os.path.expanduser(p))
+" "$HOOK_JSON" 2>/dev/null)
+    if [ -n "$TRANSCRIPT" ] && [ -f "$TRANSCRIPT" ]; then
+        if tail -n 5 "$TRANSCRIPT" | grep -q 'ExitPlanMode'; then
+            exit 0
+        fi
+    fi
+fi
 
 # Resolve plugin root
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$(readlink -f "$BASH_SOURCE")")")}"
