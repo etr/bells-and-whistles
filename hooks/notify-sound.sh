@@ -6,8 +6,19 @@
 # Read hook JSON from stdin
 HOOK_JSON=$(cat)
 
-# Skip notification when exiting plan mode (not a real job completion)
+# For stop events: skip sub-agents and plan-mode exits
 if [ "$1" = "stop" ]; then
+    # Skip completion sound for sub-agents (only main agent should notify)
+    AGENT_ID=$(python3 -c "
+import json, sys
+d = json.loads(sys.argv[1])
+print(d.get('agent_id', ''))
+" "$HOOK_JSON" 2>/dev/null)
+    if [ -n "$AGENT_ID" ]; then
+        exit 0
+    fi
+
+    # Skip when exiting plan mode (not a real job completion)
     TRANSCRIPT=$(python3 -c "
 import json, sys, os
 d = json.loads(sys.argv[1])
@@ -23,6 +34,12 @@ fi
 
 # Resolve plugin root
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(dirname "$(dirname "$(readlink -f "$BASH_SOURCE")")")}"
+
+# Mute state lives one level above the versioned plugin root so it survives upgrades
+MUTE_DIR="${PLUGIN_ROOT}/.."
+
+# Exit if globally muted
+[ -f "$MUTE_DIR/.mute_all" ] && exit 0
 
 # Read config (defaults: theme=beeps, mode=sound_and_voice, accent=us, gender=male, voice_style=full_sentence)
 CONFIG="$PLUGIN_ROOT/config.json"
@@ -50,6 +67,9 @@ SOUNDS_DIR="$PLUGIN_ROOT/sounds"
 # Get tmux window index if in tmux
 WIN=""
 [ -n "$TMUX_PANE" ] && WIN=$(tmux display-message -t "$TMUX_PANE" -p '#{window_index}' 2>/dev/null)
+
+# Exit if this window is muted
+[ -n "$WIN" ] && [ -f "$MUTE_DIR/.mute_window_${WIN}" ] && exit 0
 
 # Resolve speech directory based on themed/standard preference
 if [ "$USE_THEMED_PHRASES" = "true" ] && [ -d "$SOUNDS_DIR/speech/themed/$THEME" ]; then

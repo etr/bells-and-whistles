@@ -126,6 +126,25 @@ If you prefer to clone the repo yourself:
 claude plugins add /path/to/bells-and-whistles
 ```
 
+## Muting
+
+Silence notifications without changing your configuration:
+
+```
+/mute          # mute globally (or choose scope if in tmux)
+/mute all      # mute all tabs
+/mute tab      # mute just the current tmux window
+```
+
+```
+/unmute        # unmute (auto-detects what's muted)
+/unmute all    # unmute everything
+/unmute tab    # unmute just the current tmux window
+```
+
+Per-tab mute requires tmux. Mute state persists until you unmute or delete the
+marker files (`.mute_all`, `.mute_window_*`) from the plugin root.
+
 ## Configuration
 
 Edit `config.json` directly if you prefer:
