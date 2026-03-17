@@ -215,8 +215,7 @@ You can narrow the scope with `--theme`, `--accent`, and `--gender`.
 
 ## License
 
-Do what you want with it. If the Zelda secret-discovery sound helps you ship
-faster, that is reward enough.
+MIT — see [LICENSE](LICENSE).
 
 ## Special Thanks
 - https://github.com/jackmarketon for Elevenlabs integration, D&D/Cyberpunk audio, and configurable phrases.
