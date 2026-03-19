@@ -64,12 +64,31 @@ USE_THEMED_PHRASES="${USE_THEMED_PHRASES:-false}"
 
 SOUNDS_DIR="$PLUGIN_ROOT/sounds"
 
-# Get tmux window index if in tmux
+# Get TTY for this session and check per-session mute
+MY_TTY=""
+if [ -n "$TMUX_PANE" ]; then
+    MY_TTY=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_tty}' 2>/dev/null)
+else
+    _pid=$$
+    while [ "$_pid" -gt 1 ]; do
+        _raw=$(ps -o tty= -p "$_pid" 2>/dev/null | tr -d ' ')
+        if [ -n "$_raw" ] && [ "$_raw" != "?" ]; then
+            MY_TTY="/dev/$_raw"
+            break
+        fi
+        _new_pid=$(ps -o ppid= -p "$_pid" 2>/dev/null | tr -d ' ')
+        [ "$_new_pid" = "$_pid" ] && break
+        _pid="$_new_pid"
+    done
+fi
+if [ -n "$MY_TTY" ]; then
+    TTY_ID=$(echo "$MY_TTY" | sed 's|^/dev/||; s|/|_|g')
+    [ -f "$MUTE_DIR/.mute_tty_${TTY_ID}" ] && exit 0
+fi
+
+# Get tmux window index (for speech file selection only)
 WIN=""
 [ -n "$TMUX_PANE" ] && WIN=$(tmux display-message -t "$TMUX_PANE" -p '#{window_index}' 2>/dev/null)
-
-# Exit if this window is muted
-[ -n "$WIN" ] && [ -f "$MUTE_DIR/.mute_window_${WIN}" ] && exit 0
 
 # Resolve speech directory based on themed/standard preference
 if [ "$USE_THEMED_PHRASES" = "true" ] && [ -d "$SOUNDS_DIR/speech/themed/$THEME" ]; then
