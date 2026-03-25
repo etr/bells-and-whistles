@@ -98,10 +98,27 @@ Write `${CLAUDE_PLUGIN_ROOT}/config.json` with:
 }
 ```
 
-### 7. Clean up old hooks
+### 7. Detect WSL powershell path
+Before writing config (or immediately after), check if running on WSL:
+```bash
+grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null
+```
+
+If on WSL, auto-detect `powershell.exe` using this fallback chain:
+1. `command -v powershell.exe 2>/dev/null`
+2. Check `/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe`
+3. Check `/mnt/c/Windows/SysWOW64/WindowsPowerShell/v1.0/powershell.exe`
+
+If found, add `"wsl_powershell_path": "<detected_path>"` to the config JSON written in step 6.
+
+If not found, warn the user: "Could not find powershell.exe — sound playback on WSL may not work. You can set `wsl_powershell_path` in config.json manually."
+
+If not on WSL, skip this step entirely.
+
+### 8. Clean up old hooks
 Read `~/.claude/settings.json`. If it contains hook entries under `Stop` or `Notification` that reference `~/.claude/hooks/notify-sound.sh`, remove those specific entries (but preserve any other hooks and all other settings). Write back the cleaned file.
 
-### 8. Summary
+### 9. Summary
 Print a summary:
 - Theme: <display name>
 - Mode: <display name>

@@ -53,6 +53,7 @@ print(f'ACCENT={shlex.quote(c.get(\"accent\",\"us\"))}')
 print(f'GENDER={shlex.quote(c.get(\"gender\",\"male\"))}')
 print(f'VOICE_STYLE={shlex.quote(c.get(\"voice_style\",\"full_sentence\"))}')
 print(f'USE_THEMED_PHRASES={shlex.quote(str(c.get(\"use_themed_phrases\",False)).lower())}')
+print(f'WSL_POWERSHELL_PATH={shlex.quote(c.get(\"wsl_powershell_path\",\"\"))}')
 " "$CONFIG" 2>/dev/null)"
 fi
 THEME="${THEME:-beeps}"
@@ -140,6 +141,20 @@ else
     PLAT=linux
 fi
 
+# Resolve powershell.exe for WSL
+if [ "$PLAT" = "wsl" ]; then
+    POWERSHELL="${WSL_POWERSHELL_PATH:-}"
+    if [ -z "$POWERSHELL" ] || [ ! -x "$POWERSHELL" ]; then
+        POWERSHELL=$(command -v powershell.exe 2>/dev/null || true)
+    fi
+    if [ -z "$POWERSHELL" ]; then
+        for _ps in /mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe \
+                   /mnt/c/Windows/SysWOW64/WindowsPowerShell/v1.0/powershell.exe; do
+            [ -x "$_ps" ] && POWERSHELL="$_ps" && break
+        done
+    fi
+fi
+
 # SSH fallback: just bell (skip for WSL — SSH_CONNECTION is always set)
 if [ -n "$SSH_CONNECTION" ] && [ "$PLAT" != "wsl" ]; then
     printf '\a'
@@ -160,8 +175,8 @@ fi
 
 # Nothing to play — beep and exit
 if [ -z "$MELODY" ] && [ -z "$SPEECH" ]; then
-    if [ "$PLAT" = "wsl" ]; then
-        powershell.exe -NoProfile -Command "[Console]::Beep(600,150);[Console]::Beep(800,150)" &>/dev/null &
+    if [ "$PLAT" = "wsl" ] && [ -n "$POWERSHELL" ]; then
+        "$POWERSHELL" -NoProfile -Command "[Console]::Beep(600,150);[Console]::Beep(800,150)" &>/dev/null &
     else
         printf '\a'
     fi
@@ -171,17 +186,21 @@ fi
 # Build and run playback command
 case $PLAT in
     wsl)
-        CMD=""
-        if [ -n "$MELODY" ]; then
-            WIN_MELODY=$(wslpath -w "$MELODY")
-            CMD="(New-Object System.Media.SoundPlayer '$WIN_MELODY').PlaySync()"
+        if [ -n "$POWERSHELL" ]; then
+            CMD=""
+            if [ -n "$MELODY" ]; then
+                WIN_MELODY=$(wslpath -w "$MELODY")
+                CMD="(New-Object System.Media.SoundPlayer '$WIN_MELODY').PlaySync()"
+            fi
+            if [ -n "$SPEECH" ]; then
+                WIN_SPEECH=$(wslpath -w "$SPEECH")
+                [ -n "$CMD" ] && CMD="$CMD; "
+                CMD="${CMD}(New-Object System.Media.SoundPlayer '$WIN_SPEECH').PlaySync()"
+            fi
+            "$POWERSHELL" -NoProfile -Command "$CMD" &>/dev/null &
+        else
+            printf '\a'
         fi
-        if [ -n "$SPEECH" ]; then
-            WIN_SPEECH=$(wslpath -w "$SPEECH")
-            [ -n "$CMD" ] && CMD="$CMD; "
-            CMD="${CMD}(New-Object System.Media.SoundPlayer '$WIN_SPEECH').PlaySync()"
-        fi
-        powershell.exe -NoProfile -Command "$CMD" &>/dev/null &
         ;;
     mac)
         ([ -n "$MELODY" ] && afplay "$MELODY" 2>/dev/null
